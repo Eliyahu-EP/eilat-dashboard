@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דשבורד תיקופים – כרטיסיות אילת</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0f1117;--card:#1a1d27;--card2:#20243a;--border:#2a2f45;--accent:#4f8ef7;--accent2:#f7794f;--accent3:#4fc98e;--accent4:#f7c94f;--text:#e8eaf0;--muted:#8b92b0;--radius:14px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Arial Hebrew',Arial,sans-serif;min-height:100vh;padding:24px 16px 48px}
+  .header{text-align:center;margin-bottom:32px}
+  .header h1{font-size:1.9rem;font-weight:700;background:linear-gradient(90deg,#4f8ef7,#4fc98e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .header p{color:var(--muted);margin-top:6px;font-size:.95rem}
+  .month-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:28px}
+  .month-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s;font-family:inherit}
+  .month-btn:hover{border-color:var(--accent);color:var(--text)}
+  .month-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px 14px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+  .kpi::before{content:'';position:absolute;top:0;right:0;left:0;height:3px;background:var(--kpi-color,var(--accent));border-radius:var(--radius) var(--radius) 0 0}
+  .kpi-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kpi-value{font-size:2rem;font-weight:700;line-height:1;color:var(--kpi-color,var(--accent))}
+  .kpi-delta{font-size:.8rem;display:flex;align-items:center;gap:4px}
+  .kpi-delta.up{color:var(--accent3)}.kpi-delta.down{color:var(--accent2)}.kpi-delta.flat{color:var(--muted)}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px}
+  @media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
+  .chart-card,.chart-full{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .chart-full{margin-bottom:28px}
+  .chart-card h3,.chart-full h3{font-size:.9rem;color:var(--muted);margin-bottom:16px;font-weight:600;letter-spacing:.03em}
+  .chart-wrap{position:relative;height:220px}
+  .chart-full .chart-wrap{height:260px}
+  .table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;overflow-x:auto}
+  .table-card h3{font-size:.9rem;color:var(--muted);margin-bottom:16px;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:.87rem;text-align:right}
+  thead th{padding:10px 12px;color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;border-bottom:1px solid var(--border)}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer}
+  tbody tr:hover{background:var(--card2)}
+  tbody tr.selected{background:rgba(79,142,247,.12)}
+  tbody tr.selected td:first-child{color:var(--accent);font-weight:700}
+  tbody td{padding:10px 12px}
+  .td-pos{color:var(--accent3)}.td-neg{color:var(--accent2)}.td-flat{color:var(--muted)}
+  .footer{text-align:center;margin-top:32px;color:var(--muted);font-size:.78rem}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>דשבורד תיקופים – כרטיסיות אילת</h1>
+  <p>נתונים ממאי 2025 עד מאי 2026 &bull; מתעדכן מדוחות חודשיים מאושרים</p>
+</div>
+<div class="month-bar" id="monthBar"></div>
+<div class="kpi-grid">
+  <div class="kpi" style="--kpi-color:#4f8ef7"><div class="kpi-label">סה"כ מנויים</div><div class="kpi-value" id="kpiTotal">—</div><div class="kpi-delta" id="kpiTotalDelta"></div></div>
+  <div class="kpi" style="--kpi-color:#4fc98e"><div class="kpi-label">מנויים קבועים</div><div class="kpi-value" id="kpiRegular">—</div><div class="kpi-delta" id="kpiRegularDelta"></div></div>
+  <div class="kpi" style="--kpi-color:#f7c94f"><div class="kpi-label">מנויים יומיים</div><div class="kpi-value" id="kpiDaily">—</div><div class="kpi-delta" id="kpiDailyDelta"></div></div>
+  <div class="kpi" style="--kpi-color:#f7794f"><div class="kpi-label">ימי חיוב יומי</div><div class="kpi-value" id="kpiDays">—</div><div class="kpi-delta" id="kpiDaysDelta"></div></div>
+  <div class="kpi" style="--kpi-color:#b94ff7"><div class="kpi-label">מנויים שקולים</div><div class="kpi-value" id="kpiEquiv">—</div><div class="kpi-delta" id="kpiEquivDelta"></div></div>
+</div>
+<div class="chart-full">
+  <h3>מגמה חודשית – מנויים שקולים לאורך זמן</h3>
+  <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+</div>
+<div class="charts-grid">
+  <div class="chart-card"><h3>קבועים vs. יומיים</h3><div class="chart-wrap"><canvas id="stackedChart"></canvas></div></div>
+  <div class="chart-card"><h3>ימי חיוב יומי</h3><div class="chart-wrap"><canvas id="daysChart"></canvas></div></div>
+</div>
+<div class="table-card">
+  <h3>טבלת נתונים מלאה</h3>
+  <table>
+    <thead><tr><th>חודש</th><th>קבועים</th><th>Δ קבועים</th><th>יומיים</th><th>Δ יומיים</th><th>ימי חיוב</th><th>Δ ימים</th><th>שקולים</th><th>Δ שקולים</th></tr></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+<div class="footer">נבנה אוטומטית מקובצי ה-Excel החודשיים המאושרים &bull; אגד הסעים אילת</div>
+<script>
+const DATA=[{"month":"אפריל","month_num":4,"year":2025,"sort_key":202504,"label":"אפריל 2025","regular":4920,"daily":638,"total":5558,"daily_days":4068,"equiv_daily":209,"equiv_total":5129,"days_in_month":30},{"month":"מאי","month_num":5,"year":2025,"sort_key":202505,"label":"מאי 2025","regular":4735,"daily":570,"total":5305,"daily_days":2964,"equiv_daily":152,"equiv_total":4887,"days_in_month":31},{"month":"יוני","month_num":6,"year":2025,"sort_key":202506,"label":"יוני 2025","regular":4658,"daily":626,"total":5284,"daily_days":3203,"equiv_daily":164,"equiv_total":4822,"days_in_month":30},{"month":"יולי","month_num":7,"year":2025,"sort_key":202507,"label":"יולי 2025","regular":5265,"daily":421,"total":5686,"daily_days":2304,"equiv_daily":118,"equiv_total":5383,"days_in_month":31},{"month":"אוגוסט","month_num":8,"year":2025,"sort_key":202508,"label":"אוגוסט 2025","regular":5356,"daily":345,"total":5701,"daily_days":2119,"equiv_daily":109,"equiv_total":5465,"days_in_month":31},{"month":"ספטמבר","month_num":9,"year":2025,"sort_key":202509,"label":"ספטמבר 2025","regular":5152,"daily":524,"total":5676,"daily_days":2908,"equiv_daily":149,"equiv_total":5301,"days_in_month":30},{"month":"אוקטובר","month_num":10,"year":2025,"sort_key":202510,"label":"אוקטובר 2025","regular":5243,"daily":493,"total":5736,"daily_days":3768,"equiv_daily":193,"equiv_total":5436,"days_in_month":31},{"month":"נובמבר","month_num":11,"year":2025,"sort_key":202511,"label":"נובמבר 2025","regular":4992,"daily":355,"total":5347,"daily_days":1979,"equiv_daily":101,"equiv_total":5093,"days_in_month":30},{"month":"דצמבר","month_num":12,"year":2025,"sort_key":202512,"label":"דצמבר 2025","regular":4888,"daily":360,"total":5248,"daily_days":2265,"equiv_daily":116,"equiv_total":5004,"days_in_month":31},{"month":"ינואר","month_num":1,"year":2026,"sort_key":202601,"label":"ינואר 2026","regular":4615,"daily":243,"total":4858,"daily_days":1310,"equiv_daily":67,"equiv_total":4682,"days_in_month":31},{"month":"פברואר","month_num":2,"year":2026,"sort_key":202602,"label":"פברואר 2026","regular":4635,"daily":318,"total":4953,"daily_days":1876,"equiv_daily":96,"equiv_total":4731,"days_in_month":28},{"month":"מרץ","month_num":3,"year":2026,"sort_key":202603,"label":"מרץ 2026","regular":4491,"daily":859,"total":5350,"daily_days":3137,"equiv_daily":161,"equiv_total":4652,"days_in_month":31},{"month":"אפריל","month_num":4,"year":2026,"sort_key":202604,"label":"אפריל 2026","regular":5015,"daily":357,"total":5372,"daily_days":2124,"equiv_daily":109,"equiv_total":5124,"days_in_month":30},{"month":"מאי","month_num":5,"year":2026,"sort_key":202605,"label":"מאי 2026","regular":5067,"daily":341,"total":5408,"daily_days":1908,"equiv_daily":98,"equiv_total":5165,"days_in_month":31}];
+let selIdx=DATA.length-1,tC,sC,dC;
+const labels=DATA.map(d=>d.label);
+function fmt(n){return n!=null?n.toLocaleString('he-IL'):'—'}
+function setDelta(id,curr,prev,field){const el=document.getElementById(id);if(!prev){el.textContent='—';el.className='kpi-delta flat';return;}const d=curr[field]-prev[field];if(d===0){el.textContent='ללא שינוי';el.className='kpi-delta flat';}else{el.textContent=(d>0?'▲ +':'▼ ')+fmt(Math.abs(d))+' לעומת '+prev.label;el.className='kpi-delta '+(d>0?'up':'down');}}
+function updateKPIs(i){const d=DATA[i],p=i>0?DATA[i-1]:null;document.getElementById('kpiTotal').textContent=fmt(d.total);document.getElementById('kpiRegular').textContent=fmt(d.regular);document.getElementById('kpiDaily').textContent=fmt(d.daily);document.getElementById('kpiDays').textContent=fmt(d.daily_days);document.getElementById('kpiEquiv').textContent=fmt(d.equiv_total);setDelta('kpiTotalDelta',d,p,'total');setDelta('kpiRegularDelta',d,p,'regular');setDelta('kpiDailyDelta',d,p,'daily');setDelta('kpiDaysDelta',d,p,'daily_days');setDelta('kpiEquivDelta',d,p,'equiv_total');}
+function buildMonthBar(){const bar=document.getElementById('monthBar');DATA.forEach((d,i)=>{const btn=document.createElement('button');btn.className='month-btn'+(i===selIdx?' active':'');btn.textContent=d.label;btn.onclick=()=>selectMonth(i);bar.appendChild(btn);});}
+function selectMonth(i){selIdx=i;document.querySelectorAll('.month-btn').forEach((b,j)=>b.classList.toggle('active',j===i));document.querySelectorAll('#tableBody tr').forEach((r,j)=>r.classList.toggle('selected',j===i));updateKPIs(i);highlightCharts();}
+function highlightCharts(){[tC,sC,dC].forEach(ch=>{if(!ch)return;ch.data.datasets.forEach(ds=>{ds.pointRadius=DATA.map((_,i)=>i===selIdx?8:3);});ch.update('none');});}
+function buildCharts(){const gc='rgba(42,47,69,.7)',tc='#8b92b0',baseOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:11}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:11},callback:v=>v.toLocaleString('he-IL')}}}};
+tC=new Chart(document.getElementById('trendChart'),{type:'line',data:{labels,datasets:[{label:'שקולים',data:DATA.map(d=>d.equiv_total),borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,.12)',borderWidth:2.5,fill:true,tension:.3,pointBackgroundColor:'#4f8ef7',pointRadius:DATA.map((_,i)=>i===selIdx?8:3),pointHoverRadius:8},{label:'קבועים',data:DATA.map(d=>d.regular),borderColor:'#4fc98e',borderWidth:2,fill:false,tension:.3,pointBackgroundColor:'#4fc98e',pointRadius:DATA.map((_,i)=>i===selIdx?8:3),borderDash:[5,3]}]},options:{...baseOpts,plugins:{...baseOpts.plugins,legend:{display:true,labels:{color:'#8b92b0',boxWidth:14}}},onClick(_,els){if(els.length)selectMonth(els[0].index);}}});
+sC=new Chart(document.getElementById('stackedChart'),{type:'bar',data:{labels,datasets:[{label:'קבועים',data:DATA.map(d=>d.regular),backgroundColor:'rgba(79,201,142,.75)',borderRadius:4},{label:'יומיים',data:DATA.map(d=>d.daily),backgroundColor:'rgba(247,201,79,.75)',borderRadius:4}]},options:{...baseOpts,plugins:{...baseOpts.plugins,legend:{display:true,labels:{color:'#8b92b0',boxWidth:12,font:{size:11}}}},scales:{...baseOpts.scales,x:{...baseOpts.scales.x,stacked:true},y:{...baseOpts.scales.y,stacked:true}},onClick(_,els){if(els.length)selectMonth(els[0].index);}}});
+dC=new Chart(document.getElementById('daysChart'),{type:'bar',data:{labels,datasets:[{data:DATA.map(d=>d.daily_days),backgroundColor:DATA.map((_,i)=>i===selIdx?'#f7794f':'rgba(247,121,79,.5)'),borderRadius:4}]},options:{...baseOpts,onClick(_,els){if(els.length)selectMonth(els[0].index);}}});}
+function buildTable(){const tb=document.getElementById('tableBody');DATA.forEach((d,i)=>{const p=i>0?DATA[i-1]:null;const df=f=>{if(!p)return{t:'—',c:''};const v=d[f]-p[f];return{t:(v>0?'+':'')+v.toLocaleString('he-IL'),c:v>0?'td-pos':v<0?'td-neg':'td-flat'};};const dr=df('regular'),dd=df('daily'),ddays=df('daily_days'),de=df('equiv_total');const tr=document.createElement('tr');if(i===selIdx)tr.classList.add('selected');tr.onclick=()=>selectMonth(i);tr.innerHTML=`<td>${d.label}</td><td>${fmt(d.regular)}</td><td class="${dr.c}">${dr.t}</td><td>${fmt(d.daily)}</td><td class="${dd.c}">${dd.t}</td><td>${fmt(d.daily_days)}</td><td class="${ddays.c}">${ddays.t}</td><td>${fmt(d.equiv_total)}</td><td class="${de.c}">${de.t}</td>`;tb.appendChild(tr);});}
+buildMonthBar();buildCharts();buildTable();updateKPIs(selIdx);
+</script>
+</body>
+</html>
